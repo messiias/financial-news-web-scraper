@@ -16,7 +16,6 @@
   - `end_date`: is **optional**.
 - It will trigger the process of collecting the data, after it the news will be saved in a **csv** file.
 
----
 # To do
 
 - Must have an endpoint to trigger the start of collecting data from web
