@@ -19,6 +19,5 @@
 # To do
 
 - Must have an endpoint to trigger the start of collecting data from web
-  - This endpoint can receive the start_date and the end_date on request body;
-  - The dates must be **optional**;
+  - This endpoint **must** receive the start_date and the end_date on request body;
   - Also, **must** receive the source of the news that will collected, initially **infomoney** and **istoedinheiro**;

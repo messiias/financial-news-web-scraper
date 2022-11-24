@@ -1,0 +1,5 @@
+class GenerateService {
+
+}
+
+export { GenerateService };
