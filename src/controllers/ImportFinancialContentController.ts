@@ -1,14 +1,14 @@
-import { Request, Response } from "express";
 import fs from "fs";
-import { GenerateService } from "../services/GenerateService";
+import { Request, Response } from "express";
+import { ImportFinancialContentService } from "../services/ImportFinancialContentService";
 
-class GenerateController {
+class ImportFinancialContentController {
   async handle(request: Request, response: Response): Promise<Response> {
-    const { sources, start_date, end_date } = request.body;
+    const { sources, startDate, endDate } = request.body;
     const avaiableSources = this.getAvaiableSources();
-    const generateService = new GenerateService();
+    const generateService = new ImportFinancialContentService();
 
-    if(!sources || !start_date || !end_date) {
+    if(!sources || !startDate || !endDate) {
       return response.status(400);
     }
   
@@ -16,7 +16,7 @@ class GenerateController {
       return response.status(400);
     }
 
-    // generateService.generate({sources, start_date, end_date});
+    generateService.import({sources, startDate, endDate});
 
     return response.status(200);
   }
@@ -40,4 +40,4 @@ class GenerateController {
 }
 
 
-export { GenerateController };
+export { ImportFinancialContentController };

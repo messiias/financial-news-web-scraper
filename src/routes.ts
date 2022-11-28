@@ -2,6 +2,6 @@ import { Router } from "express";
 
 const routes = Router();
 
-routes.post("/generate");
+routes.post("/import");
 
 export { routes };

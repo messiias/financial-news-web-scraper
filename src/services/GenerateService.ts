@@ -1,5 +1,0 @@
-class GenerateService {
-
-}
-
-export { GenerateService };
