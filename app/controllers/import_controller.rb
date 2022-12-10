@@ -4,19 +4,16 @@ require 'sinatra/base'
 
 class ImportController < Sinatra::Base
   AVAIABLE_SOURCES = %w[infomoney seudinheiro].freeze
-  HEADERS = 0
-  CONTENT = 1
 
   post '/api/import' do
+    service = ImportService.new
     body = Oj.load(request.body.read)
 
     return error params_error unless body['sources'] && body['date']
     return error sources_error unless validate_sources(body)
 
-    seudinheiro = SeuDinheiroScraper.new
-    # infomoney = InfoMoneyScraper.new
-
-    export(seudinheiro.parse(body['date']))
+    result = service.execute(sources: body['sources'], date: body['date'])
+    return error service_error unless result
 
     [200, Oj.dump({ 'status' => 'CSV Generated!' })]
   end
@@ -39,13 +36,7 @@ class ImportController < Sinatra::Base
     [400, Oj.dump({ 'error' => 'Bad request!' })]
   end
 
-  def export(data)
-    file_uuid = SecureRandom.uuid
-    file_path = "out/#{file_uuid}.csv"
-
-    CSV.open(file_path, 'w') do |csv|
-      csv << data[HEADERS]
-      data[CONTENT].each { |elem| csv << elem }
-    end
+  def service_error
+    [500, Oj.dump({ 'error' => 'Internal error!' })]
   end
 end

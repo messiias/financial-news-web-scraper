@@ -1,6 +1,13 @@
 # frozen_string_literal: true
 
-class SeuDinheiroScraper
+require_relative 'scraper'
+
+module ScraperIndexes
+  DATE = 0
+  MONTH = 2
+end
+
+class SeuDinheiroScraper < Scraper
   MONTH_MAPPING = {
     'janeiro' => '01',
     'fevereiro' => '02',
@@ -16,45 +23,75 @@ class SeuDinheiroScraper
     'dezembro' => '12'
   }.freeze
 
-  YEAR = 2
-  DATE = 0
+  attr_reader :results
 
   def initialize
+    super()
     @agent = Mechanize.new
+    @default_url = 'https://www.seudinheiro.com/empresas'
 
-    @main_page = @agent.get('https://www.seudinheiro.com/empresas')
+    @main_page = @agent.get(@default_url)
     @latest_news = @main_page.search('div.stream-item-container')
   end
 
   def parse(date)
-    result = []
-    urls_and_dates = get_content_urls_by_date(date)
+    count = 2
+    found = false
+    results = []
 
-    urls_and_dates.each do |url_and_date|
-      page = @agent.get(url_and_date['url'])
-      result << read_page(page, url_and_date['date'])
+    loop do
+      urls_and_dates = get_content_urls_by_date(date)
+
+      urls_and_dates.each do |url_and_date|
+        page = @agent.get(url_and_date['url'])
+        results << read_page(page, url_and_date['date'])
+      end
+
+      break if found
+
+      found = true unless results.empty?
+
+      @main_page = @agent.get("#{@default_url}/pagina/#{count}/")
+      @latest_news = @main_page.search('div.stream-item-container')
+      count += 1
+
+      pp count
+      break if count == 500
     end
 
-    [%w[title text date], result]
+    @results = results
+  end
+
+  def to_csv
+    file_uuid = SecureRandom.uuid
+    file_path = "out/#{file_uuid}"
+
+    CSV.open(file_path, 'w') do |csv|
+      csv << %w[title text date]
+      @results.each { |elem| csv << elem }
+    end
   end
 
   private
 
   def get_content_urls_by_date(date)
-    links = []
+    results = latest_content(date)
+    header_content.each { |content| results << content if content['date'] == date }
+    results
+  end
+
+  def latest_content(date)
+    results = []
 
     @latest_news.each do |news|
-      link_html_path = 'div.feed_content_imageMobile a'
-
-      link = news.search(link_html_path).map { |elem| elem['href'] }
+      link = news.search('div.feed_content_imageMobile a').map { |elem| elem['href'] }
       next unless link.first
 
-      url = link.first
       parsed_date = parse_date(news.search('div.feed_content_time').text.strip)
-      links << { 'url' => url, 'date' => parsed_date } if parsed_date == date
+      results << { 'url' => link.first, 'date' => parsed_date } if parsed_date == date
     end
 
-    links
+    results
   end
 
   def parse_date(date)
@@ -62,8 +99,8 @@ class SeuDinheiroScraper
     splitted_date = unformatted_date.split(' ')
 
     year = splitted_date.last
-    month = MONTH_MAPPING[splitted_date[YEAR]]
-    date = splitted_date[DATE]
+    month = MONTH_MAPPING[splitted_date[ScraperIndexes::MONTH]]
+    date = splitted_date[ScraperIndexes::DATE]
 
     Date.parse("#{year}-#{month}-#{date}").to_s
   end
@@ -76,5 +113,31 @@ class SeuDinheiroScraper
     page_content.each { |content| parsed_content << content.text.strip }
 
     [title, parsed_content.join(''), date]
+  end
+
+  def header_content
+    links = []
+
+    links << highlighted_content
+    header_news = @main_page.search('div.medium_single a.medium_single_title')
+    header_news_dates = @main_page.search('div.medium_single div.medium_single_time')
+
+    header_news.each do |content|
+      url = content['href']
+      header_news_dates.each do |date|
+        links << { 'url' => url, 'date' => parse_date(date.text.strip) }
+      end
+    end
+
+    links
+  end
+
+  def highlighted_content
+    highlighted = @main_page.search('div.category_single div a.category_single_title')
+
+    highlighted_url = highlighted.map { |elem| elem['href'] }
+    highlighted_date = @main_page.search('div.category_single div.category_single_time').text.strip
+
+    { 'url' => highlighted_url, 'date' => highlighted_date }
   end
 end
