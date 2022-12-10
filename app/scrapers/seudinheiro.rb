@@ -1,8 +1,5 @@
 # frozen_string_literal: true
 
-require 'mechanize'
-require 'date'
-
 class SeuDinheiroScraper
   MONTH_MAPPING = {
     'janeiro' => '01',
@@ -30,14 +27,20 @@ class SeuDinheiroScraper
   end
 
   def parse(date)
-    links = get_links_by_date(date)
+    result = []
+    urls_and_dates = get_content_urls_by_date(date)
 
-    pp links
+    urls_and_dates.each do |url_and_date|
+      page = @agent.get(url_and_date['url'])
+      result << read_page(page, url_and_date['date'])
+    end
+
+    [%w[title text date], result]
   end
 
   private
 
-  def get_links_by_date(date)
+  def get_content_urls_by_date(date)
     links = []
 
     @latest_news.each do |news|
@@ -46,9 +49,9 @@ class SeuDinheiroScraper
       link = news.search(link_html_path).map { |elem| elem['href'] }
       next unless link.first
 
-      link = link.first
+      url = link.first
       parsed_date = parse_date(news.search('div.feed_content_time').text.strip)
-      links << { 'link' => link, 'date' => parsed_date } if parsed_date == date
+      links << { 'url' => url, 'date' => parsed_date } if parsed_date == date
     end
 
     links
@@ -64,7 +67,14 @@ class SeuDinheiroScraper
 
     Date.parse("#{year}-#{month}-#{date}").to_s
   end
-end
 
-teste = SeuDinheiroScraper.new
-teste.parse('2022-12-08')
+  def read_page(page, date)
+    parsed_content = []
+    title = page.search('article.single h1.single__title').text.strip
+    page_content = page.search('article.single div.single__body p')
+
+    page_content.each { |content| parsed_content << content.text.strip }
+
+    [title, parsed_content.join(''), date]
+  end
+end

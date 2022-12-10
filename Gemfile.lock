@@ -100,6 +100,7 @@ GEM
       rubocop (~> 1.33)
     ruby-progressbar (1.11.0)
     ruby2_keywords (0.0.5)
+    securerandom (0.2.1)
     simplecov (0.21.2)
       docile (~> 1.1)
       simplecov-html (~> 0.11)
@@ -150,6 +151,7 @@ DEPENDENCIES
   rerun
   rspec
   rubocop-rspec
+  securerandom
   simplecov
   sinatra
   solargraph

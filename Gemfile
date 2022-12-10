@@ -6,6 +6,7 @@ gem 'httparty'
 gem 'mechanize'
 gem 'oj'
 gem 'require_all'
+gem 'securerandom'
 gem 'sinatra'
 
 group :development do
