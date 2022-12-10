@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require_relative 'parser'
-
-class InfoMoney < Parser
+class InfoMoney
 
 end
