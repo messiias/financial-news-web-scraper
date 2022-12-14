@@ -40,9 +40,7 @@ class SeuDinheiroScraper < Scraper
     results = []
 
     loop do
-      urls_and_dates = get_content_urls_by_date(date)
-
-      urls_and_dates.each do |url_and_date|
+      get_content_urls_by_date(date).each do |url_and_date|
         page = @agent.get(url_and_date['url'])
         results << read_page(page, url_and_date['date'])
       end
@@ -50,13 +48,9 @@ class SeuDinheiroScraper < Scraper
       break if found
 
       found = true unless results.empty?
-
-      @main_page = @agent.get("#{@default_url}/pagina/#{count}/")
-      @latest_news = @main_page.search('div.stream-item-container')
+      update_page(count)
       count += 1
-
-      pp count
-      break if count == 500
+      break if count == 50
     end
 
     @results = results
@@ -73,6 +67,11 @@ class SeuDinheiroScraper < Scraper
   end
 
   private
+
+  def update_page(count)
+    @main_page = @agent.get("#{@default_url}/pagina/#{count}/")
+    @latest_news = @main_page.search('div.stream-item-container')
+  end
 
   def get_content_urls_by_date(date)
     results = latest_content(date)
@@ -95,6 +94,8 @@ class SeuDinheiroScraper < Scraper
   end
 
   def parse_date(date)
+    return if date.empty?
+
     unformatted_date = date.split(' - ').first
     splitted_date = unformatted_date.split(' ')
 
@@ -122,11 +123,10 @@ class SeuDinheiroScraper < Scraper
     header_news = @main_page.search('div.medium_single a.medium_single_title')
     header_news_dates = @main_page.search('div.medium_single div.medium_single_time')
 
-    header_news.each do |content|
-      url = content['href']
-      header_news_dates.each do |date|
-        links << { 'url' => url, 'date' => parse_date(date.text.strip) }
-      end
+    header_news.length.times do |i|
+      url = header_news[i]['href']
+      date = header_news_dates[i].text.strip
+      links << { 'url' => url, 'date' => parse_date(date) }
     end
 
     links
@@ -136,8 +136,8 @@ class SeuDinheiroScraper < Scraper
     highlighted = @main_page.search('div.category_single div a.category_single_title')
 
     highlighted_url = highlighted.map { |elem| elem['href'] }
-    highlighted_date = @main_page.search('div.category_single div.category_single_time').text.strip
+    highlighted_date = @main_page.search('div.category_single div div.category_single_time')
 
-    { 'url' => highlighted_url, 'date' => highlighted_date }
+    { 'url' => highlighted_url.first, 'date' => parse_date(highlighted_date.text.strip) }
   end
 end
