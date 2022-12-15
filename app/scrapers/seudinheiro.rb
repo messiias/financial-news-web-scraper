@@ -50,6 +50,7 @@ class SeuDinheiroScraper < Scraper
       found = true unless results.empty?
       update_page(count)
       count += 1
+      pp count
       break if count == 50
     end
 

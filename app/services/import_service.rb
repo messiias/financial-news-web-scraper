@@ -11,17 +11,14 @@ class ImportService
   end
 
   def execute(sources:, start_date:, end_date:)
-    parsed_start_date = Date.parse(start_date)
-    parsed_end_date = Date.parse(end_date)
+    workdays = request_workdays(start_date, end_date)
     results = []
-
-    until parsed_start_date == parsed_end_date + 1
-      result = do_scrapping(sources, parsed_start_date.to_s)
-      return false if result.empty?
+    pp workdays
+    workdays.each do |workday|
+      result = do_scrapping(sources, workday)
+      next if result.empty?
 
       results.push(*result)
-
-      parsed_start_date += 1
     end
 
     return false if results.empty?
@@ -31,6 +28,11 @@ class ImportService
   end
 
   private
+
+  def request_workdays(start_date, end_date)
+    base_url = 'https://api.informativos.io/holiday_markets/bvmvf/working_days_by_range'
+    HTTParty.get("#{base_url}/#{start_date}/#{end_date}")
+  end
 
   def do_scrapping(sources, date)
     results = []
