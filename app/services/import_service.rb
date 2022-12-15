@@ -12,15 +12,8 @@ class ImportService
 
   def execute(sources:, start_date:, end_date:)
     workdays = request_workdays(start_date, end_date)
-    results = []
-    pp workdays
-    workdays.each do |workday|
-      result = do_scrapping(sources, workday)
-      next if result.empty?
 
-      results.push(*result)
-    end
-
+    results = do_scrapping(sources, workdays)
     return false if results.empty?
 
     export(results, start_date, end_date)
@@ -34,12 +27,12 @@ class ImportService
     HTTParty.get("#{base_url}/#{start_date}/#{end_date}")
   end
 
-  def do_scrapping(sources, date)
+  def do_scrapping(sources, workdays)
     results = []
 
     sources.each do |source|
       source_instance = AVAIABLE_SOURCES[source].new
-      results.push(*source_instance.parse(date))
+      results.push(*source_instance.parse(workdays))
     end
 
     results

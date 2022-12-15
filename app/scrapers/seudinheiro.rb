@@ -29,29 +29,24 @@ class SeuDinheiroScraper < Scraper
     super()
     @agent = Mechanize.new
     @default_url = 'https://www.seudinheiro.com/empresas'
-
-    @main_page = @agent.get(@default_url)
-    @latest_news = @main_page.search('div.stream-item-container')
   end
 
-  def parse(date)
-    count = 2
-    found = false
+  def parse(workdays)
     results = []
+    page = 2
 
-    loop do
-      get_content_urls_by_date(date).each do |url_and_date|
-        page = @agent.get(url_and_date['url'])
-        results << read_page(page, url_and_date['date'])
+    workdays.reverse_each do |workday|
+      update_page(page)
+      response = get_content_urls_by_date(workday, page)
+      page = response.last
+
+      response.first.each do |url_and_date|
+        results << read_page(@agent.get(url_and_date['url']), url_and_date['date'])
       end
 
-      break if found
-
-      found = true unless results.empty?
-      update_page(count)
-      count += 1
-      pp count
-      break if count == 50
+      puts '==========================='
+      pp page
+      puts '==========================='
     end
 
     @results = results
@@ -69,21 +64,46 @@ class SeuDinheiroScraper < Scraper
 
   private
 
-  def update_page(count)
-    @main_page = @agent.get("#{@default_url}/pagina/#{count}/")
-    @latest_news = @main_page.search('div.stream-item-container')
+  def update_page(page)
+    @main_page = @agent.get("#{@default_url}/pagina/#{page}/")
   end
 
-  def get_content_urls_by_date(date)
-    results = latest_content(date)
-    header_content.each { |content| results << content if content['date'] == date }
-    results
+  def get_content_urls_by_date(date, page)
+    results = []
+    next_page = false
+    found = false
+    parsed_date = Date.parse(date)
+
+    if parsed_date == Date.today || parsed_date == (Date.today - 1)
+      header_content.each { |content| results << content if content['date'] == date }
+    end
+
+    loop do
+      update_page(page)
+      urls = latest_content(date)
+      pp page
+
+      if found
+        next_page = true unless urls.empty?
+        break
+      end
+
+      page += 1
+
+      next if urls.empty?
+
+      found = true
+      results.push(*urls)
+    end
+
+    [results, next_page ? page : page - 1]
   end
 
   def latest_content(date)
     results = []
+    latest_news = @main_page.search('div.stream-item-container')
 
-    @latest_news.each do |news|
+    latest_news.each do |news|
       link = news.search('div.feed_content_imageMobile a').map { |elem| elem['href'] }
       next unless link.first
 
