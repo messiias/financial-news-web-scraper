@@ -9,6 +9,7 @@ class ImportController < Sinatra::Base
     service = ImportService.new
     body = Oj.load(request.body.read)
 
+    return error params_error unless body
     return error params_error unless body['sources'] && validate_dates(body)
     return error sources_error unless validate_sources(body)
 
